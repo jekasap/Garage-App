@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kehoe's Garage</title>
+    <style>
+        /* Base Styles & System Fonts */
+        :root {
+            --bg-color: #f4f7f6;
+            --nav-bg: #2c3e50;
+            --text-main: #333;
+            --card-bg: #fff;
+            --btn-blue: #3498db;
+            --btn-blue-active: #2980b9;
+            --alert-red: #e74c3c;
+            --success-green: #2ecc71;
+            --stage-0: #95a5a6; /* Booked in */
+            --stage-1: #f39c12; /* Being checked */
+            --stage-2: #e67e22; /* Waiting parts */
+            --stage-3: #8e44ad; /* Being fixed */
+            --stage-4: #2ecc71; /* Ready */
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* Prevents text selection when tapping on tablets */
+        }
+
+        body { background-color: var(--bg-color); color: var(--text-main); }
+
+        /* Sample Data Banner */
+        #demo-banner {
+            background-color: #f1c40f;
+            color: #000;
+            text-align: center;
+            padding: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            z-index: 1000;
+            position: relative;
+        }
+
+        /* Navigation */
+        nav {
+            background-color: var(--nav-bg);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        nav button {
+            background: none;
+            border: none;
+            color: #bdc3c7;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 15px;
+            cursor: pointer;
+            flex-grow: 1;
+        }
+        nav button.active { color: #fff; border-bottom: 4px solid var(--btn-blue); }
+
+        /* Views */
+        .view { display: none; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .view.active { display: block; }
+
+        /* --- WORKSHOP VIEW (Greasy Hands / Tablet Optimized) --- */
+        #workshop-view { padding: 10px; }
+        .workshop-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            position: relative;
+            border-left: 15px solid var(--stage-0);
+        }
+        .workshop-card h2 { font-size: 2rem; margin-bottom: 5px; }
+        .workshop-card p.car-model { font-size: 1.4rem; color: #666; margin-bottom: 15px; }
+        .workshop-card p.status { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; }
+        
+        .giant-btn {
+            width: 100%;
+            padding: 25px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 10px;
+            border: none;
+            background-color: var(--btn-blue);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 0 var(--btn-blue-active);
+            transition: transform 0.1s;
+        }
+        .giant-btn:active { transform: translateY(4px); box-shadow: none; }
+        .giant-btn:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; }
+
+        .mic-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            background: #eee;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* --- OFFICE VIEW (Dashboard) --- */
+        .office-header {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .ready-count { font-size: 3rem; font-weight: bold; color: var(--success-green); }
+        .stage-group { margin-bottom: 30px; }
+        .stage-group h3 { font-size: 1.3rem; margin-bottom: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px;}
+        .office-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 8px solid var(--stage-0);
+        }
+        .office-card.alert { 
+            background-color: #fadbd8; 
+            border: 2px solid var(--alert-red); 
+            border-left: 8px solid var(--alert-red);
+        }
+        .office-card-info strong { font-size: 1.1rem; }
+        .office-card-info span { color: #555; display: block; font-size: 0.9rem; margin-top: 3px;}
+        .office-card.alert .alert-text { color: var(--alert-red); font-weight: bold; }
+        .btn-collect {
+            padding: 10px 15px; background: var(--success-green); color: white; border: none; border-radius: 5px; cursor: pointer;
+        }
+
+        /* --- CUSTOMER VIEW (Lookup) --- */
+        .lookup-box {
+            background: var(--card-bg);
+            padding: 30px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            user-select: auto; /* Re-enable for inputs */
+        }
+        .lookup-box h2 { text-align: center; margin-bottom: 20px; color: var(--nav-bg); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; }
+        .form-group input { 
+            width: 100%; padding: 15px; font-size: 1.1rem; border: 1px solid #ccc; border-radius: 8px; 
+        }
+        .lookup-btn {
+            width: 100%; padding: 15px; background: var(--nav-bg); color: #fff; font-size: 1.2rem;
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+        #customer-result {
+            margin-top: 25px; padding: 20px; border-radius: 8px; text-align: center; display: none; background: #e8f8f5; border: 2px solid var(--success-green);
+        }
+        #customer-result h3 { font-size: 1.5rem; margin-bottom: 10px; }
+        #customer-result p { font-size: 1.1rem; line-height: 1.5; color: #2c3e50; }
+        .error-msg { color: var(--alert-red); font-weight: bold; text-align: center; margin-top: 15px; display: none; }
+        
+        /* Reset DB Button */
+        .reset-btn { display: block; width: 100%; margin-top: 40px; padding: 10px; background: #ccc; border: none; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <div id="demo-banner">⚠️ DEMO MODE: VISUALIZING SAMPLE DATA</div>
+
+    <nav>
+        <button id="tab-workshop" class="active" onclick="switchTab('workshop')">Workshop</button>
+        <button id="tab-office" onclick="switchTab('office')">Office</button>
+        <button id="tab-customer" onclick="switchTab('customer')">Customer</button>
+    </nav>
+
+    <!-- WORKSHOP VIEW -->
+    <div id="workshop-view" class="view active">
+        <!-- Rendered via JS -->
+    </div>
+
+    <!-- OFFICE VIEW -->
+    <div id="office-view" class="view">
+        <div class="office-header">
+            <p>Cars Ready for Collection</p>
+            <div class="ready-count" id="ready-counter">0</div>
+        </div>
+        <div id="office-lists">
+            <!-- Rendered via JS -->
+        </div>
+    </div>
+
+    <!-- CUSTOMER VIEW -->
+    <div id="customer-view" class="view">
+        <div class="lookup-box">
+            <h2>Check Your Car Status</h2>
+            <p style="text-align: center; margin-bottom: 20px; color: #666;">Look up using Job ID and Reg</p>
+            
+            <div class="form-group">
+                <label>Job Number</label>
+                <input type="text" id="cust-job" placeholder="e.g. 1001" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Car Registration</label>
+                <input type="text" id="cust-reg" placeholder="e.g. 221-WX-592" autocomplete="off">
+            </div>
+            
+            <button class="lookup-btn" onclick="checkCustomerStatus()">Check Status</button>
+            
+            <div id="customer-error" class="error-msg">Sorry, we couldn't find a match. Please check your details.</div>
+            
+            <div id="customer-result">
+                <h3>Status: <span id="cust-stage-title"></span></h3>
+                <p id="cust-stage-note"></p>
+            </div>
+        </div>
+        
+        <button class="reset-btn" onclick="resetDatabase()">Reset Sample Data</button>
+    </div>
+
+    <script>
+        // --- DATA MODEL ---
+        const STAGES = [
+            "Booked in",           // 0
+            "Being checked",       // 1
+            "Waiting for parts",   // 2
+            "Being fixed",         // 3
+            "Ready to collect",    // 4
+            "Collected"            // 5 (Hidden from workshop, removes from active)
+        ];
+
+        // Friendly notes mapped to stages for the Customer View
+        const CUSTOMER_NOTES = [
+            "Your car is safely booked in and is in the queue for our mechanics.",
+            "Our mechanics are currently inspecting your car to diagnose what needs to be done.",
+            "We have ordered specific parts required for your car. We will resume work as soon as they arrive.",
+            "Good news! Our mechanics are actively working on fixing your car right now.",
+            "Great news! Your car is completely finished and ready for you to collect at your convenience.",
+            "Your car has been collected. Thank you for choosing Kehoe's Garage!"
+        ];
+
+        // 8 Sample Records including the "Waiting for parts > 2 days" constraint
+        const INITIAL_DATA = [
+            { id: '1001', reg: '221-WX-592', car: 'Toyota Corolla', stage: 0, waitDays: 0 },
+            { id: '1002', reg: '191-WX-848', car: 'Ford Focus',     stage: 1, waitDays: 0 },
+            { id: '1003', reg: '152-WX-112', car: 'Honda Civic',    stage: 2, waitDays: 1 }, // Normal wait
+            { id: '1004', reg: '181-WX-993', car: 'VW Golf',        stage: 2, waitDays: 4 }, // RED ALERT (> 2 days)
+            { id: '1005', reg: '202-WX-441', car: 'Nissan Qashqai', stage: 3, waitDays: 0 },
+            { id: '1006', reg: '211-WX-772', car: 'Hyundai Tucson', stage: 4, waitDays: 0 }, // Ready 1
+            { id: '1007', reg: '172-WX-334', car: 'Kia Sportage',   stage: 4, waitDays: 0 }, // Ready 2
+            { id: '1008', reg: '161-WX-889', car: 'Audi A4',        stage: 0, waitDays: 0 }
+        ];
+
+        let database = [];
+
+        // --- CORE LOGIC ---
+        function initApp() {
+            try {
+                // Check if there's saved data using a fresh key
+                const saved = localStorage.getItem('kehoeData_v2');
+                if (saved) {
+                    database = JSON.parse(saved);
+                    // Basic validation to prevent crashes from corrupted old data
+                    if (!Array.isArray(database) || database.length === 0 || database[0].stage === undefined) {
+                        throw new Error("Invalid format");
+                    }
+                } else {
+                    database = JSON.parse(JSON.stringify(INITIAL_DATA));
+                    saveData();
+                }
+            } catch (e) {
+                // If localStorage is blocked by the browser or data is corrupted, fall back gracefully
+                console.warn("Storage restricted or corrupted. Using initial data for this session.");
+                database = JSON.parse(JSON.stringify(INITIAL_DATA));
+            }
+            renderAll();
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('kehoeData_v2', JSON.stringify(database));
+            } catch(e) {
+                console.warn("Could not save to localStorage.");
+            }
+        }
+
+        function resetDatabase() {
+            if(confirm("Reset all data back to the original sample set?")) {
+                try {
+                    localStorage.removeItem('kehoeData_v2');
+                } catch(e) {}
+                initApp();
+                alert("Data reset successfully.");
+            }
+        }
+
+        // --- NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId + '-view').classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            // Hide customer result when switching away
+            if(tabId !== 'customer') {
+                document.getElementById('customer-result').style.display = 'none';
+                document.getElementById('customer-error').style.display = 'none';
+            }
+            
+            renderAll();
+        }
+
+        // --- RENDERING VIEWS ---
+        function renderAll() {
+            renderWorkshop();
+            renderOffice();
+        }
+
+        // 1. Workshop View Logic
+        function renderWorkshop() {
+            const container = document.getElementById('workshop-view');
+            container.innerHTML = ''; // Clear
+
+            // Only show cars that are NOT collected (stage < 5)
+            const activeCars = database.filter(car => car.stage < 5);
+
+            activeCars.forEach(car => {
+                const isReady = car.stage === 4;
+                const nextStageText = isReady ? "DONE" : `MOVE TO: ${STAGES[car.stage + 1].toUpperCase()}`;
+                const stageColor = `var(--stage-${car.stage})`;
+
+                const cardHTML = `
+                    <div class="workshop-card" style="border-left-color: ${stageColor}">
+                        <div class="mic-btn" onclick="triggerMic('${car.reg}')">🎤</div>
+                        <h2>${car.reg}</h2>
+                        <p class="car-model">${car.car} (Job #${car.id})</p>
+                        <p class="status" style="color: ${stageColor}">Current: ${STAGES[car.stage]}</p>
+                        <button class="giant-btn" 
+                            ${isReady ? 'disabled' : ''} 
+                            style="${isReady ? '' : `background-color: var(--btn-blue);`}"
+                            onclick="advanceStage('${car.id}')">
+                            ${nextStageText}
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        function advanceStage(jobId) {
+            const car = database.find(c => c.id === jobId);
+            if (car && car.stage < 4) {
+                car.stage++;
+                // If it enters "Waiting for parts", reset wait days to 0
+                if(car.stage === 2) car.waitDays = 0; 
+                
+                saveData();
+                renderAll();
+            }
+        }
+
+        function triggerMic(reg) {
+            alert(`Voice note simulation activated for ${reg}.\n(In production, this would record audio for the office.)`);
+        }
+
+        // 2. Office View Logic
+        function renderOffice() {
+            const container = document.getElementById('office-lists');
+            container.innerHTML = ''; // Clear
+            
+            let readyCounter = 0;
+
+            // Group cars by stage (0 to 4)
+            for (let i = 0; i <= 4; i++) {
+                const carsInStage = database.filter(c => c.stage === i);
+                if (carsInStage.length === 0) continue;
+
+                if (i === 4) readyCounter += carsInStage.length;
+
+                let groupHTML = `<div class="stage-group"><h3>${STAGES[i]} (${carsInStage.length})</h3>`;
+
+                carsInStage.forEach(car => {
+                    // Rule: Waiting for parts (stage 2) > 2 days = RED ALERT
+                    const isAlert = (car.stage === 2 && car.waitDays > 2);
+                    const stageColor = `var(--stage-${car.stage})`;
+
+                    groupHTML += `
+                        <div class="office-card ${isAlert ? 'alert' : ''}" style="${!isAlert ? `border-left-color: ${stageColor}` : ''}">
+                            <div class="office-card-info">
+                                <strong>${car.reg}</strong> - ${car.car} <span>Job #${car.id}</span>
+                                ${isAlert ? `<span class="alert-text">⚠️ Waiting parts for ${car.waitDays} days!</span>` : ''}
+                                ${car.stage === 2 && !isAlert ? `<span>Waiting parts: ${car.waitDays} days</span>` : ''}
+                            </div>
+                            ${i === 4 ? `<button class="btn-collect" onclick="markCollected('${car.id}')">Mark Collected</button>` : ''}
+                        </div>
+                    `;
+                });
+
+                groupHTML += `</div>`;
+                container.innerHTML += groupHTML;
+            }
+
+            // Update Header Counter
+            document.getElementById('ready-counter').innerText = readyCounter;
+        }
+
+        function markCollected(jobId) {
+            const car = database.find(c => c.id === jobId);
+            if (car) {
+                car.stage = 5; // Move to hidden 'Collected' state
+                saveData();
+                renderAll();
+            }
+        }
+
+        // 3. Customer View Logic
+        function checkCustomerStatus() {
+            const inputJob = document.getElementById('cust-job').value.trim();
+            const inputReg = document.getElementById('cust-reg').value.trim().toUpperCase();
+            
+            const errorDiv = document.getElementById('customer-error');
+            const resultDiv = document.getElementById('customer-result');
+            
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+
+            if (!inputJob || !inputReg) {
+                errorDiv.innerText = "Please enter both Job Number and Registration.";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Find match
+            const match = database.find(c => c.id === inputJob && c.reg.toUpperCase() === inputReg);
+
+            if (match) {
+                document.getElementById('cust-stage-title').innerText = STAGES[match.stage];
+                document.getElementById('cust-stage-note').innerText = CUSTOMER_NOTES[match.stage];
+                resultDiv.style.display = 'block';
+            } else {
+                errorDiv.innerText = "Sorry, we couldn't find a match. Please check your details.";
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Boot up immediately (removed dependency on window.onload)
+        initApp();
+
+    </script>
+</body>
+</html>
